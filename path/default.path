@@ -1,0 +1,4 @@
+sport_link = /html/body[@id='body']/div[@id='page']/div[@id='logonav']//a//*[text()='体育']
+nba_link = /html/body//div[@class='cheadNavLink']//a[text()='NBA']
+east_rank_link = /html/body//div[@id='rankss']//a[text()='东部排名']
+top_name_text = /html/body/div[@class='main']//div[@id='eastrank']//ul[@class='topbdr rankli']//a[contains(@style, 'rank1.gif')]

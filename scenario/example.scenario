@@ -1,0 +1,7 @@
+core.navigate('http://www.sina.com.cn');
+core.click('sport_link');
+core.click('nba_link');
+core.mouseover('east_rank_link');
+name = core.getText('top_name_text');
+
+return name;
