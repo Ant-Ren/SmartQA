@@ -17,6 +17,7 @@
 package com.smartqa.utils;
 
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.HashMap;
 import java.util.Map;
@@ -66,6 +67,52 @@ public abstract class CommonUtils {
 	}
 	
 	/**
+	 * simply execute a process
+	 * 
+	 * @param path - process path
+	 */
+	public static void runProcess(String path){
+	    try {
+	    	Process proc = Runtime.getRuntime().exec(path);  
+	    	int code = proc.waitFor();
+	    	LOG.info("Process "+path+" running with exit code: "+code);
+	    } catch (Exception ex) {  
+	    	LOG.error("Process "+path+" failed to run with message: "+ex.getMessage());
+	    }
+	}
+	
+	/**
+	 * read one line string from console
+	 * @return console string
+	 */
+	public static String readFromConsole(){
+		try{
+			BufferedReader buf = new BufferedReader(new InputStreamReader(System.in));
+			return buf.readLine();
+		}catch(IOException ex){
+			return "";
+		}
+	}
+	
+	/**
+	 * print string array with specific separator
+	 * 
+	 * @param arr
+	 * @param separator
+	 * @return single string
+	 */
+	public static String printArray(String[] arr, char separator){
+		StringBuilder buf = new StringBuilder();
+		for(String s : arr)
+			buf.append(s).append(separator);
+		
+		if(buf.length()>0)
+			buf.deleteCharAt(buf.length()-1);
+		
+		return buf.toString();
+	}
+	
+	/**
 	 * only for windows, kill process
 	 * 
 	 * @param name
@@ -97,10 +144,9 @@ public abstract class CommonUtils {
 						LOG.warn("Timeout, over 60s can't kill process with name "+name);
 						break;
 					}
-					
 					killProcess(name);
 				}
-			}
+			}//end of run
 		});
 	}
 	

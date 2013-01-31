@@ -16,6 +16,9 @@
  */
 package com.smartqa.engine;
 
+import java.util.LinkedList;
+import java.util.List;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -23,6 +26,9 @@ import groovy.lang.Binding;
 import groovy.util.GroovyScriptEngine;
 
 import com.smartqa.exception.SmartQAException;
+import com.smartqa.utils.CommonUtils;
+import com.smartqa.utils.KeyboardUtils;
+import com.smartqa.utils.WebDriverUtils;
 import com.smartqa.webdriver.PathController;
 
 /**
@@ -61,7 +67,6 @@ import com.smartqa.webdriver.PathController;
  * return name;
  * </p>
  * 
- * Note: This script go to sina web site, NBA page then read east top one team's name. 
  * <p>
  * 
  * @version 1.0
@@ -70,27 +75,57 @@ import com.smartqa.webdriver.PathController;
  */
 public class EngineMain {
 	private final static Logger LOG = LogManager.getLogger("EngineMain");
+	private static GroovyScriptEngine scriptEngine;
+	private static Binding context = new Binding();
+	private static PathController path = PathController.getInstance();
 	
 	public static void main(String[] args){
 		//could add -Dsmartqa.debug=true to open debug log
 		System.setProperty("smartqa.debug", "false");
-		
-		PathController path = PathController.getInstance();
-		WebEngine engine = new WebEngine(path);
-		
 		try{
-			//default scenario library is classpath: scenario folder
-			GroovyScriptEngine groovy = new GroovyScriptEngine("scenario");
-			Binding binding = new Binding();
-			binding.setVariable("core", engine);
-			Object value = groovy.run(parseArgs(args), binding);
+			List<Scenario> scenarios = parseScenario(args);
+			for(Scenario scenario : scenarios)
+				runScenario(scenario);
 			
-			//scenario can return result
-			if(value != null)
-				LOG.info("Scenario result: "+value);
+			for(Scenario scenario : scenarios)
+				System.out.println(scenario);
 		}catch(Exception ex){
 			ex.printStackTrace();
 			throw new SmartQAException(ex.getMessage());
+		}
+	}
+	
+	/**
+	 * trigger each scenario instance to run,
+	 * restart browser each time to ignore side-affect of each scenario
+	 * 
+	 * @param instance - scenario bean
+	 */
+	private static void runScenario(Scenario instance){
+		WebEngine engine = null;
+		try{
+			engine = new WebEngine(path);
+			
+			//default scenario library is classpath: scenario folder
+			scriptEngine = new GroovyScriptEngine("scenario");
+			context.setVariable("core", engine);
+			context.setVariable("common", CommonUtils.class);
+			context.setVariable("web", WebDriverUtils.class);
+			context.setVariable("keyboard", KeyboardUtils.class);
+			
+			Object value = scriptEngine.run(instance.name, context);
+			//scenario can return result
+			if(value != null){
+				if(value.toString().startsWith("failed"))
+					throw new Exception(value.toString());
+				LOG.info("Scenario result: "+value);
+			}
+			
+			instance.status = "finish";
+			instance.result = "success";
+		}catch(Exception ex){
+			instance.status = "abort";
+			instance.result = "exception: "+ex.getMessage();
 		}finally{
 			//at last, don't forget to close web engine
 			engine.close();
@@ -100,12 +135,15 @@ public class EngineMain {
 	/**
 	 * parse input args, to indicate which scenario should be executed
 	 * 
-	 * @param args
+	 * @param args - pass the scenario file names through console args which you plan to execute
 	 * @return scenario name to execute
 	 */
-	private static String parseArgs(String[] args){
-		if(args.length < 1)
-			throw new SmartQAException("Please indicate one scenario name to execute.");
-		return args[0];
+	private static List<Scenario> parseScenario(String[] args){
+		args = new String[]{"software_manage/software_search.scenario"};
+		List<Scenario> list = new LinkedList<Scenario>();
+		for(String arg : args)
+			list.add(new Scenario(arg));
+		
+		return list;
 	}
 }

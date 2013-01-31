@@ -109,11 +109,19 @@ public abstract class KeyboardUtils {
 		char[] words = value.toCharArray();
 		for(char c : words){
 			if(c>='A' && c<='Z')
-				pressKeyWithShift(keyMap.get(c+32));
+				pressKeyWithShift(keyMap.get(Character.toLowerCase(c)));
+			
 			
 			if(keyMap.containsKey(c))
 				pressKey(keyMap.get(c));
 		}
+	}
+	
+	/**
+	 * type tab key
+	 */
+	public static void tab(){
+		pressKey(KeyEvent.VK_TAB);
 	}
 	
 	/**
@@ -124,13 +132,25 @@ public abstract class KeyboardUtils {
 	}
 	
 	/**
+	 * just paste what in the clipboard
+	 */
+	public static void paste(){
+		robot.keyPress(KeyEvent.VK_CONTROL);
+		robot.keyPress(KeyEvent.VK_V);
+		robot.keyRelease(KeyEvent.VK_V);
+		robot.keyRelease(KeyEvent.VK_CONTROL);
+		robot.keyPress(KeyEvent.VK_ENTER);
+		robot.keyRelease(KeyEvent.VK_ENTER);
+	}
+	
+	/**
 	 * type key with key code
 	 * 
 	 * @param keyvalue
 	 */
 	private static void pressKey(int keyvalue) {
 		robot.keyPress(keyvalue); 
-		CommonUtils.waiting(500);
+		CommonUtils.waiting(200);
 		robot.keyRelease(keyvalue);
 	}
 	

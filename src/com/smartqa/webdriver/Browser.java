@@ -21,7 +21,7 @@ import java.io.FileInputStream;
 import java.util.Arrays;
 import java.util.Properties;
 
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.openqa.selenium.WebDriver;
@@ -29,6 +29,7 @@ import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
 import org.openqa.selenium.firefox.FirefoxDriver;
 import org.openqa.selenium.firefox.FirefoxProfile;
+import org.openqa.selenium.firefox.internal.ProfilesIni;
 import org.openqa.selenium.ie.InternetExplorerDriver;
 import org.openqa.selenium.remote.DesiredCapabilities;
 
@@ -106,8 +107,8 @@ public class Browser {
 		else if("Firefox".equalsIgnoreCase(type))
 			return getFirefoxDriver();
 		
-		LOG.warn("Unknown type: "+type+", using default Chrome Driver");
-		return getChromeDriver();
+		LOG.warn("Unknown type: "+type+", using default Firefox Driver");
+		return getFirefoxDriver();
 	}
 	
 	/**
@@ -117,8 +118,12 @@ public class Browser {
 	 */
 	public WebDriver getFirefoxDriver(){
 		if(firefoxReady){
-			FirefoxProfile fp = new FirefoxProfile();
-			fp.setPreference("dom.disable_open_during_load", true);
+			ProfilesIni allProfiles = new ProfilesIni();
+			FirefoxProfile fp = allProfiles.getProfile("default");
+//			fp.setPreference("capability.policy.policynames", "strict") ;
+//			fp.setPreference("capability.policy.strict.Window.alert", "noAccess") ;
+//			fp.setPreference("capability.policy.strict.Window.confirm", "noAccess") ;
+//			fp.setPreference("capability.policy.strict.Window.prompt", "noAccess") ;
 			return new FirefoxDriver(fp);
 		}
 		
@@ -148,7 +153,8 @@ public class Browser {
 	public WebDriver getChromeDriver(){
 		if(chromeReady){
 			ChromeOptions option = new ChromeOptions();
-			option.addArguments(Arrays.asList("--disable-popup-blocking"));
+			option.addArguments(Arrays.asList("--disable-popup-blocking", "--start-maximized"));
+			//option.addArguments(Arrays.asList("--user-data-dir=C:/Users/renmingyan/AppData/Local/Google/Chrome/User Data/Default"));
 			return new ChromeDriver(option);
 		}
 		return null;

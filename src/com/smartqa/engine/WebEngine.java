@@ -16,19 +16,23 @@
  */
 package com.smartqa.engine;
 
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.openqa.selenium.Alert;
 import org.openqa.selenium.By;
 import org.openqa.selenium.Dimension;
+import org.openqa.selenium.NoAlertPresentException;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.interactions.Actions;
+import org.openqa.selenium.support.ui.Select;
 import org.openqa.selenium.support.ui.Wait;
 import org.openqa.selenium.support.ui.WebDriverWait;
 
 import com.smartqa.exception.ElementNotFoundException;
 import com.smartqa.exception.InvalidPathException;
+import com.smartqa.utils.CommonUtils;
 import com.smartqa.utils.WebDriverUtils;
 import com.smartqa.webdriver.Browser;
 import com.smartqa.webdriver.PathController;
@@ -73,7 +77,8 @@ public class WebEngine {
 	private WebDriver driver;
 	private PathController path;
 	private String namespace = "default";
-	private long timeout = 20;
+	private long timeout = 10;
+	private long speed = 500;
 	private boolean debug = false;
 	
 	/**
@@ -111,6 +116,15 @@ public class WebEngine {
 		this.driver.quit();
 		LOG.info("switch driver to " + type);
 		this.driver = browser.getDriver(type);
+	}
+	
+	/**
+	 * reset action perform speed, default is 500ms, unit is ms
+	 * 
+	 * @param speed
+	 */
+	public void resetSpeed(long speed){
+		this.speed = speed;
 	}
 	
 	/**
@@ -162,6 +176,18 @@ public class WebEngine {
 	}
 	
 	/**
+	 * switch context by id
+	 * 
+	 * @param id - iframe id
+	 */
+	public void context(String id){
+		if(StringUtils.isEmpty(id))
+			driver.switchTo().defaultContent();
+		else
+			driver.switchTo().frame(id);
+	}
+	
+	/**
 	 * click web element
 	 * 
 	 * @param name - stands for web element
@@ -170,8 +196,38 @@ public class WebEngine {
 	public WebEngine click(String name){
 		WebElement element = locate(name);
 		element.click();
+		CommonUtils.waiting(speed);
 		return this;
-	}    
+	}
+	
+	/**
+	 * 
+	 * @param name
+	 * @param args
+	 * @return WebEngine
+	 */
+	public WebEngine clickByArgs(String name, String... args){
+		WebElement element = locateByArgs(name, args);
+		element.click();
+		CommonUtils.waiting(speed);
+		return this;
+	}
+	
+	/**
+	 * select a drop down web element by its value
+	 * 
+	 * @param name - stands for web element
+	 * @param value - value to select
+	 * @return WebEngine
+	 */
+	public WebEngine select(String name, String value){
+		WebElement element = locate(name);
+		Select select = new Select(element);
+		select.selectByVisibleText(value);
+		
+		CommonUtils.waiting(speed);
+		return this;
+	}
 	
 	/**
 	 * get web element text content
@@ -192,10 +248,11 @@ public class WebEngine {
 	 * @return WebEngine
 	 */
 	public WebEngine upload(String name, String filePath){
-		WebElement element = locate(name);
-		element.sendKeys(filePath);
-		element.submit();
+		String xpath = path.getPath(namespace, name);
 		
+		WebElement element = driver.findElement(By.xpath(xpath));
+		element.sendKeys(filePath);
+		CommonUtils.waiting(speed);
 		return this;
 	}
 	
@@ -209,7 +266,7 @@ public class WebEngine {
 		WebElement element = locate(name);
 		Actions builder = new Actions(driver);    
 		builder.moveToElement(element).build().perform();
-		
+		CommonUtils.waiting(speed);
 		return this;
 	}
 	
@@ -226,7 +283,7 @@ public class WebEngine {
 		
 		Actions builder = new Actions(driver);
 		builder.dragAndDrop(srcElement, destElement).build().perform();
-		
+		CommonUtils.waiting(speed);
 		return this;
 	}
 	
@@ -239,7 +296,9 @@ public class WebEngine {
 	 */
 	public WebEngine fill(String name, String value){
 		WebElement element = locate(name);
+		element.clear();
 		element.sendKeys(value);
+		CommonUtils.waiting(speed);
 		return this;
 	}
 	
@@ -255,14 +314,49 @@ public class WebEngine {
 	}
 	
 	/**
+	 * using browser native refresh web page
+	 * 
+	 * @return WebEngine
+	 */
+	public WebEngine refresh(){
+		driver.navigate().refresh();
+		CommonUtils.waiting(2*1000);
+		LOG.info("refresh page...");
+		return this;
+	}
+	
+	/**
+	 * handle alert popup window, just accept it
+	 * 
+	 * @return WebEngine
+	 */
+	public WebEngine alert(){
+		try{
+			CommonUtils.waiting(speed);
+			Alert alert = driver.switchTo().alert();
+			alert.accept();
+		}catch(NoAlertPresentException ex){LOG.info("Try to handle alert, but not found one.");}
+		return this;
+	}
+	
+	/**
 	 * check web page web element status
 	 * 
 	 * @param name - name stands for web element
 	 * @param condition - currently support: display, enable
+	 * @param args - possible need dynamic args to build xpath
 	 * @return WebEngine
 	 */
-	public boolean should(String name, String condition){
+	public boolean should(String name, String condition, String... args){
 		String xpath = path.getPath(namespace, name);
+		
+		if(args != null && args.length>0)
+			for(int i=0; i < args.length; i++){
+				String flag = "\\{"+i+"\\}";
+				if(xpath.contains("{"+i+"}"))
+					xpath = xpath.replaceAll(flag, args[i]);
+			}
+		
 		if(StringUtils.isEmpty(xpath))
 			throw new InvalidPathException(name, namespace);
 		
@@ -285,16 +379,34 @@ public class WebEngine {
 	 * @return element located or null if not found
 	 */
 	private WebElement locate(String name){
+		return locateByArgs(name, new String[]{});
+	}
+	
+	/**
+	 * locate web element
+	 * 
+	 * @param name - name stands for web element
+	 * @return element located or null if not found
+	 */
+	private WebElement locateByArgs(String name, String... args){
 		String xpath = path.getPath(namespace, name);
+		if(args != null && args.length>0)
+		for(int i=0; i < args.length; i++){
+			String flag = "\\{"+i+"\\}";
+			if(xpath.contains("{"+i+"}"))
+				xpath = xpath.replaceAll(flag, args[i]);
+		}
+		
 		if(StringUtils.isEmpty(xpath))
 			throw new InvalidPathException(name, namespace);
 		
 		try{
-			Wait<WebDriver> wait = new WebDriverWait(driver, timeout);    
-			WebElement element = wait.until(WebDriverUtils.visibility(By.xpath(xpath)));
 			if(debug)
 		    	LOG.info("Locate web element "+namespace+"."+name+" with xpath: \n" + xpath);
-		    
+			
+			Wait<WebDriver> wait = new WebDriverWait(driver, timeout);    
+			WebElement element = wait.until(WebDriverUtils.visibility(By.xpath(xpath)));
+			
 		    return element;
 		}catch(Exception ex){
 			throw new ElementNotFoundException(xpath);

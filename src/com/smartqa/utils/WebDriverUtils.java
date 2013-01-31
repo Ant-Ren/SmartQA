@@ -23,7 +23,7 @@ import java.util.Map;
 import java.util.Set;
 
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.lang.math.NumberUtils;
+import org.apache.commons.lang3.math.NumberUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.openqa.selenium.By;
@@ -109,7 +109,7 @@ public abstract class WebDriverUtils {
 	    return new ExpectedCondition<WebElement>() {    
 	          public WebElement apply(WebDriver driver) {    
 	            WebElement element = driver.findElement(by);    
-	            return element.isDisplayed() ? element : null;    
+	            return element.isDisplayed() ? element : null;
 	          }    
 	    };    
 	}
@@ -160,7 +160,6 @@ public abstract class WebDriverUtils {
 	 * 
 	 * @param driver
 	 * @param savePath
-	 * @param delay
 	 * @return screenshot image path
 	 */
 	public static String takeScreenshot(WebDriver driver, String savePath){
